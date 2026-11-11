@@ -1,4 +1,4 @@
-set(DEFAULT_TARGET hat_imu_cdc_ex)
+set(DEFAULT_TARGET project)
 add_executable(${DEFAULT_TARGET}
   ${CMAKE_CURRENT_LIST_DIR}/src/main.c
 )
