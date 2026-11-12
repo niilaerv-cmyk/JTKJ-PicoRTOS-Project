@@ -37,6 +37,14 @@ int main(void) {
     stdio_init_all();
 // IMU:n alustus
     init_ICM42670();
+// Alustetaan I2C IMU:n dataa varten
+    init_i2c_defaul();
+//asetetaan IMU:n näytteenottotaajuudeksi 100Hz ja valitaan mittausalueeksi +-2G, koska meillä kiinnostaa vain missä asennossa pico on.
+    ICM42670_StartAccel(
+        ICM42670_ACCEL_ODR_100HZ,
+        ICM42670_ACCEL_FSR_2G
+    );
+
 
 
 // taski päivittää globaalin muuttujan, "asenot" arvoa 0.5 sekunnin välein 1 = pystyssä, 2 = vaaka, 3 = ei tunnistettavaa asentoa
@@ -55,7 +63,13 @@ vTaskStartScheduler();
 
 
 int read_orientation(void){
-    NULL
+    int ICM42670_read_sensor_data(
+    float *ax, float *ay, float *az,
+    float *gx, float *gy, float *gz,
+    float *t
+//tarvitsemme kuitenkin vain arvoja ax, ay ja az, eli kiihtyvyyttä.
+);
+    
 
 }   
 
