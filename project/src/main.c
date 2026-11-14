@@ -159,7 +159,7 @@ void update_orientation(void) {
 }
 
 // Function that stores the symbols in to the global array Message and counts
-// the character length of the message.
+// the character length of the message
 void symbolhandler(char symbol) {
     if (len < (BUFFER_SIZE - 1)) {
         Message[len] = symbol;
