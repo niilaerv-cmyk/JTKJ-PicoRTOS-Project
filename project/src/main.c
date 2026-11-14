@@ -16,15 +16,11 @@ int read_orientation(void);
 void update_orientation(void);
 
 // taskin toteutusfunktio, jossa kutsutaan kaikkia taskissa tarvittavia funktioita
-void read_pose_task(void * pvParameters)
+void read_pose_task(void * pvParameters);
 
     Whlie(1) {
+        
         read_orientation();
-        /*tähän vielä muita funktioita
-            -
-            -
-            -
-        */
 
         vTaskDelay(pdMS_TO_TICKS(500));
     }
@@ -63,14 +59,23 @@ vTaskStartScheduler();
 
 
 int read_orientation(void){
-    int ICM42670_read_sensor_data(
-    float *ax, float *ay, float *az,
-    float *gx, float *gy, float *gz,
-    float *t
+    float ax, ay, az;
+    float gx, gy, gz;
+    float temp;
+ //Funktio odottaa parametreikseen muistiosoitteita 
+    ICM42670_read_sensor_data(
+        &ax, &ay, &az,
+        &gx, &gy, &gz,
+        &temp
 //tarvitsemme kuitenkin vain arvoja ax, ay ja az, eli kiihtyvyyttä.
 );
-    
-
+// tunnistetaan asento
+    if (fabs(az)> 0.95f)
+    {orientation = 1; }
+    else if (fabs(ax)> 0.95f)
+    {orientation = 2;}
+    else
+    {orientation = 3;} // eli asento ei tunnisetettu kummaksikkaan edellä olevista
 }   
 
 void update_orientation(void) {
