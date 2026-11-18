@@ -11,11 +11,14 @@
 #define BUTTON_TASK_STACK_SIZE 512
 #define BUFFER_SIZE 256
 
-//globaali muuttuja, johon tallennetaan laitteen asento
+// Globaali muuttuja, johon tallennetaan laitteen asento
 int orientation = 3;
-//Global Variable where the message is stored
+// Global Variable where the message is stored
 char Message[BUFFER_SIZE];
+// Tracks the length of the message.
 int len = 0;
+// Counter for how many spaces have been pressed in a row.
+int counter = 0;
 
 //funktioita, joita kutsutaan ReadPose-taskissa
 void read_orientation(void);
@@ -37,8 +40,6 @@ void read_pose_task(void * pvParameters) {
 // when a message is complete and resets the message buffer.
 void button_task(void *pvParameters) {
     (void)pvParameters;
-    // Counter for how many spaces pressed in a row.
-    int counter = 0;
     // Variables that track if the buttons were pressed last loop.
     bool last_button1_press = false;
     bool last_button2_press = false;
@@ -69,16 +70,6 @@ void button_task(void *pvParameters) {
 
         }
 
-        // If two spaces have been pressed in a row start sending the message
-        // and resets the message buffer and length.
-        if (counter == 2) {
-            sprintf(Message, "%s", Message);
-            //HERE SOMETHING TO START THE MESSAGE SENDING FUNCTION
-            Message[0] = '\0';
-            len = 0;
-            counter = 0;
-        }
-
         // Update variables for last button presses if the buttons were pressed or not.
         last_button1_press = button1_press;
         last_button2_press = button2_press;
@@ -92,8 +83,17 @@ static void serial_task(void *arg){
     (void)arg;
     // keep task running forever
     while(1){
+        // If two spaces have been pressed in a row send the message
+        // and reset the message buffer and length.
+        if (counter == 2) {
+            sprintf(Message, "%s", Message);
+            Message[0] = '\0';
+            len = 0;
+            counter = 0;
+        }
+
         printf("SerialTask is running!\n"); // send message to workstation via USB
-        vTaskDelay(pdMS_TO_TICKS(1000));  // delay for 1 second
+        vTaskDelay(pdMS_TO_TICKS(10));  // delay for 10 ms
     }
 }   
 
