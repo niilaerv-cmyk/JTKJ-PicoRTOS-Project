@@ -7,7 +7,7 @@
 #include <math.h>
 
 
-#define READ_POSE_TASK_STACK_SIZE 32
+#define READ_POSE_TASK_STACK_SIZE 1024
 #define BUTTON_TASK_STACK_SIZE 512
 #define BUFFER_SIZE 256
 
@@ -26,6 +26,8 @@ void symbolhandler(char symbol);
 void read_pose_task(void * pvParameters) {
 
     while(1) {
+
+        printf("tämä toimii\n");
         
         read_orientation();
 
@@ -98,15 +100,16 @@ static void serial_task(void *arg){
 }   
 
 int main(void) {
+    printf("Hello!\n");
 
 // picon i/o alustus
     stdio_init_all();
 //Initialize TKJ HAT SDK
     init_hat_sdk();
-// IMU:n alustus
-    init_ICM42670();
 // Alustetaan I2C IMU:n dataa varten
     init_i2c_default();
+// IMU:n alustus
+    init_ICM42670();
 //asetetaan IMU:n näytteenottotaajuudeksi 100Hz ja valitaan mittausalueeksi +-2G, koska meillä kiinnostaa vain missä asennossa pico on.
     ICM42670_startAccel(
         ICM42670_ACCEL_ODR_100HZ,
