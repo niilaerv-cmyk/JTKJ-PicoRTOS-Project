@@ -14,7 +14,7 @@
 //globaali muuttuja, johon tallennetaan laitteen asento
 int orientation = 3;
 //Global Variable where the message is stored
-char Message[BUFFER_SIZE] = "";
+char Message[BUFFER_SIZE];
 int len = 0;
 
 //funktioita, joita kutsutaan ReadPose-taskissa
@@ -159,7 +159,8 @@ void update_orientation(void) {
 }
 
 // Function that stores the symbols in to the global array Message and counts
-// the character length of the message
+// the character length of the message. Avoids buffer overflow by stopping when
+// length equals BUFFER_SIZE - 1. Last position is reserved for \0.
 void symbolhandler(char symbol) {
     if (len < (BUFFER_SIZE - 1)) {
         Message[len] = symbol;
