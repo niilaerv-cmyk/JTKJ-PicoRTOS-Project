@@ -3,7 +3,7 @@
 #include <pico/cyw43_arch.h>
 #include <FreeRTOS.h>
 #include <task.h>
-#include "TKJHAT/sdk.h"
+#include <tkjhat/sdk.h>
 #include <math.h>
 
 
@@ -19,7 +19,6 @@ int len = 0;
 
 //funktioita, joita kutsutaan ReadPose-taskissa
 void read_orientation(void);
-void update_orientation(void);
 void symbolhandler(char symbol);
 
 
@@ -73,7 +72,7 @@ void button_task(void *pvParameters) {
         // If two spaces have been pressed in a row start sending the message
         // and resets the message buffer and length.
         if (counter == 2) {
-            printf("MESSAGE DONE, SENDING...\n");
+            sprintf(Message, "%s", Message);
             //HERE SOMETHING TO START THE MESSAGE SENDING FUNCTION
             Message[0] = '\0';
             len = 0;
@@ -88,6 +87,15 @@ void button_task(void *pvParameters) {
     }
 }
 
+ //define FreeRTOS task to test USB communication, send a fixed message(SerialTask is running!) to workstation via USB. Verify that if the message is received correctly to the workstation.
+static void serial_task(void *arg){
+    (void)arg;
+    // keep task running forever
+    while(1){
+        printf("SerialTask is running!\n"); // send message to workstation via USB
+        vTaskDelay(pdMS_TO_TICKS(1000));  // delay for 1 second
+    }
+}   
 
 int main(void) {
 
@@ -100,7 +108,7 @@ int main(void) {
 // Alustetaan I2C IMU:n dataa varten
     init_i2c_default();
 //asetetaan IMU:n näytteenottotaajuudeksi 100Hz ja valitaan mittausalueeksi +-2G, koska meillä kiinnostaa vain missä asennossa pico on.
-    ICM42670_StartAccel(
+    ICM42670_startAccel(
         ICM42670_ACCEL_ODR_100HZ,
         ICM42670_ACCEL_FSR_2G
     );
@@ -108,6 +116,7 @@ int main(void) {
     init_button1();
     init_button2();
 
+TaskHandle_t hSerialTask;
 
 // taski päivittää globaalin muuttujan, "asenot" arvoa 0.5 sekunnin välein 1 = pystyssä, 2 = vaaka, 3 = ei tunnistettavaa asentoa
 xTaskCreate(
@@ -127,6 +136,20 @@ xTaskCreate(
     2,
     NULL
 );
+
+// Create SerialTask
+
+    BaseType_t result = xTaskCreate(serial_task,  // (en) Task function
+                "Serial",              // (en) Name of the task 
+                1024,   // (en) Size of the stack for this task (in words). Generally 1024 or 2048
+                NULL,                 // (en) Arguments of the task 
+                2,                    // (en) Priority of this task
+                &hSerialTask);         // (en) A handle to control the execution of this task
+    
+    // Check whether task creation succeeded
+    if (result != pdPASS) {
+        printf("Failed to create SerialTask!\n");
+    }
 
 //käynnistää taskit
 vTaskStartScheduler();
@@ -153,10 +176,6 @@ void read_orientation(void){
     else
     {orientation = 3;} // eli asento ei tunnisetettu kummaksikkaan edellä olevista
 }   
-
-void update_orientation(void) {
-    NULL
-}
 
 // Function that stores the symbols in to the global array Message and counts
 // the character length of the message

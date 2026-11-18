@@ -12,6 +12,10 @@ target_link_libraries(${DEFAULT_TARGET} PRIVATE
   usb_serial_debug
 )
 
+if (PICO_CYW43_SUPPORTED)
+    target_link_libraries(${DEFAULT_TARGET} PRIVATE pico_cyw43_arch_none)
+endif()
+
 pico_enable_stdio_usb(${DEFAULT_TARGET} 0)
 pico_enable_stdio_uart(${DEFAULT_TARGET} 0)
 

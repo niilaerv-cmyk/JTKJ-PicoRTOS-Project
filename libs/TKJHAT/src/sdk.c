@@ -561,6 +561,8 @@ uint32_t veml6030_read_light() {
     //            Lopuksi tallenna arvo muuttujaan luxVal_uncorrected.
   
     uint32_t luxVal_uncorrected = 0;
+
+    double raw_lux;
     luxVal_uncorrected = raw_lux * 0.5376;
     if (luxVal_uncorrected>1000){
         // Polynomial is pulled from pg 10 of the datasheet. 
