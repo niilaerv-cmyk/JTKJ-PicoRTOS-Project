@@ -7,12 +7,12 @@
 #include <math.h>
 
 
-#define READ_POSE_TASK_STACK_SIZE 1024
+#define READ_POSE_TASK_STACK_SIZE 2048
 #define BUTTON_TASK_STACK_SIZE 512
 #define BUFFER_SIZE 256
 
 //globaali muuttuja, johon tallennetaan laitteen asento
-int orientation = 3;
+volatile int orientation = 3;
 //Global Variable where the message is stored
 char Message[BUFFER_SIZE] = "";
 int len = 0;
@@ -27,11 +27,11 @@ void read_pose_task(void * pvParameters) {
 
     while(1) {
 
-        printf("tämä toimii\n");
+        //printf("tämä toimii\n");
         
         read_orientation();
 
-        vTaskDelay(pdMS_TO_TICKS(500));
+        vTaskDelay(pdMS_TO_TICKS(2000));
     }
 }
 
@@ -94,14 +94,13 @@ static void serial_task(void *arg){
     (void)arg;
     // keep task running forever
     while(1){
-        printf("SerialTask is running!\n"); // send message to workstation via USB
+        //printf("SerialTask is running!\n"); // send message to workstation via USB
         vTaskDelay(pdMS_TO_TICKS(1000));  // delay for 1 second
     }
 }   
 
 int main(void) {
-    printf("Hello!\n");
-
+    
 // picon i/o alustus
     stdio_init_all();
 //Initialize TKJ HAT SDK
@@ -161,9 +160,16 @@ vTaskStartScheduler();
 
 
 void read_orientation(void){
+    printf("read_orientation started\n");
     float ax, ay, az;
     float gx, gy, gz;
     float temp;
+
+    ax = 123;
+    ay = 123;
+    az = 123;
+
+printf("before: %f %f %f\n", ax, ay, az);
  //Funktio odottaa parametreikseen muistiosoitteita 
     ICM42670_read_sensor_data(
         &ax, &ay, &az,
@@ -171,6 +177,8 @@ void read_orientation(void){
         &temp
 //tarvitsemme kuitenkin vain arvoja ax, ay ja az, eli kiihtyvyyttä.
 );
+
+    printf("raw: %f %f %f\n", ax, ay, az);
 // tunnistetaan asento
     if (fabs(az)> 0.95f)
     {orientation = 1; }
@@ -178,7 +186,8 @@ void read_orientation(void){
     {orientation = 2;}
     else
     {orientation = 3;} // eli asento ei tunnisetettu kummaksikkaan edellä olevista
-}   
+    printf("after: %f %f %f\n", ax, ay, az);
+}  
 
 // Function that stores the symbols in to the global array Message and counts
 // the character length of the message
