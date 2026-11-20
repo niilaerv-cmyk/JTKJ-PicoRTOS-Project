@@ -102,6 +102,11 @@ if (counter == 2) {
             len = 0;
         }
     }
+        else {
+        // Reset an empty message
+        Message[0] = '\0';
+        len = 0;
+    }
     counter = 0;
 }
         // Update variables for last button presses if the buttons were pressed or not.
