@@ -5,11 +5,14 @@
 #include <task.h>
 #include <tkjhat/sdk.h>
 #include <math.h>
-
+#include <queue.h> //added for queue functionality
+#include <string.h> 
 
 #define READ_POSE_TASK_STACK_SIZE 32
 #define BUTTON_TASK_STACK_SIZE 512
 #define BUFFER_SIZE 256
+#define MESSAGE_QUEUE_LENGTH 3 //Queue for transmitting messages to the serial task, 
+//and the maximum number of messages that can be queued at once is 3.
 
 // Globaali muuttuja, johon tallennetaan laitteen asento
 int orientation = 3;
@@ -19,6 +22,8 @@ char Message[BUFFER_SIZE];
 int len = 0;
 // Counter for how many spaces have been pressed in a row.
 int counter = 0;
+// Queue handle for transmitting completed messages from the button task to the serial task.
+QueueHandle_t messageQueue;
 
 //funktioita, joita kutsutaan ReadPose-taskissa
 void read_orientation(void);
@@ -78,24 +83,24 @@ void button_task(void *pvParameters) {
     }
 }
 
- //define FreeRTOS task to test USB communication, send a fixed message(SerialTask is running!) to workstation via USB. Verify that if the message is received correctly to the workstation.
-static void serial_task(void *arg){
+// SerialTask receives completed messages from ButtonTask and sends them to the workstation via USB.
+static void serial_task(void *arg) {
     (void)arg;
-    // keep task running forever
-    while(1){
-        // If two spaces have been pressed in a row send the message
-        // and reset the message buffer and length.
-        if (counter == 2) {
-            sprintf(Message, "%s", Message);
-            Message[0] = '\0';
-            len = 0;
-            counter = 0;
-        }
+    // Buffer for SerialTask itself to hold received messages from the Queue.
+    char receivedMessage[BUFFER_SIZE];
 
-        printf("SerialTask is running!\n"); // send message to workstation via USB
-        vTaskDelay(pdMS_TO_TICKS(10));  // delay for 10 ms
+
+    while (1) {
+        // Wait for a message from the Queue. the message will be stored in buffer receivedMessage. 
+        // SerialTask will wait until a message is available in the Queue by ButtonTask.
+        // The maximum time to wait is portMAX_DELAY, which means it will wait indefinitely.
+        if (xQueueReceive(messageQueue, receivedMessage, portMAX_DELAY) == pdPASS) {
+            // Send the received message from buffer to the workstation via USB
+            printf("%s\n", receivedMessage);
+        }
     }
-}   
+}
+
 
 int main(void) {
 
@@ -115,6 +120,13 @@ int main(void) {
 //Initialize HAT buttons 1 and 2
     init_button1();
     init_button2();
+//Creat the message Queue
+messageQueue = xQueueCreate(MESSAGE_QUEUE_LENGTH, BUFFER_SIZE);
+// Check if the Queue was created successfully
+if (messageQueue == NULL) {
+    printf("Failed to create message queue!\n");
+    return 1; // Exit the program with an error code
+}    
 
 TaskHandle_t hSerialTask;
 
@@ -153,7 +165,7 @@ xTaskCreate(
 
 //käynnistää taskit
 vTaskStartScheduler();
-
+return 0;
 }
 
 
