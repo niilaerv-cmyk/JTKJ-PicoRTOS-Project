@@ -5,17 +5,25 @@
 #include <task.h>
 #include <tkjhat/sdk.h>
 #include <math.h>
-
+#include <queue.h> //added for queue functionality
+#include <string.h> 
 
 #define READ_POSE_TASK_STACK_SIZE 2048
 #define BUTTON_TASK_STACK_SIZE 512
 #define BUFFER_SIZE 256
+#define MESSAGE_QUEUE_LENGTH 3 //Queue for transmitting messages to the serial task, 
+//and the maximum number of messages that can be queued at once is 3.
 
-//globaali muuttuja, johon tallennetaan laitteen asento
-volatile int orientation = 3;
-//Global Variable where the message is stored
-char Message[BUFFER_SIZE] = "";
+// Globaali muuttuja, johon tallennetaan laitteen asento
+int orientation = 3;
+// Global Variable where the message is stored
+char Message[BUFFER_SIZE];
+// Tracks the length of the message.
 int len = 0;
+// Counter for how many spaces have been pressed in a row.
+int counter = 0;
+// Queue handle for transmitting completed messages from the button task to the serial task.
+QueueHandle_t messageQueue;
 
 //funktioita, joita kutsutaan ReadPose-taskissa
 void read_orientation(void);
@@ -27,11 +35,12 @@ void read_pose_task(void * pvParameters) {
 
     while(1) {
 
-        //printf("tämä toimii\n");
-        
+        if (ICM42670_start_with_default_values() != 0){
+            printf("ICM-42670P could not initialize accelerometer or gyroscope\n");
+        }
         read_orientation();
 
-        vTaskDelay(pdMS_TO_TICKS(2000));
+        vTaskDelay(pdMS_TO_TICKS(500));
     }
 }
 
@@ -39,8 +48,6 @@ void read_pose_task(void * pvParameters) {
 // when a message is complete and resets the message buffer.
 void button_task(void *pvParameters) {
     (void)pvParameters;
-    // Counter for how many spaces pressed in a row.
-    int counter = 0;
     // Variables that track if the buttons were pressed last loop.
     bool last_button1_press = false;
     bool last_button2_press = false;
@@ -71,16 +78,40 @@ void button_task(void *pvParameters) {
 
         }
 
-        // If two spaces have been pressed in a row start sending the message
-        // and resets the message buffer and length.
-        if (counter == 2) {
-            sprintf(Message, "%s", Message);
-            //HERE SOMETHING TO START THE MESSAGE SENDING FUNCTION
+       // If two spaces have been pressed in a row, send the message to the queue.
+if (counter == 2) {
+    // Remove trailing spaces
+    while (len > 0 && Message[len - 1] == ' ') {
+        len--;
+    }
+    Message[len] = '\0';
+
+    // Only send a non-empty message
+    if (len > 0) {
+        char completedMessage[BUFFER_SIZE] = {0};
+
+        // Copy the completed message
+        memcpy(completedMessage, Message, len + 1);
+
+        // Send the message to the Queue
+        if (xQueueSend(messageQueue,
+                       completedMessage,
+                       portMAX_DELAY) == pdPASS) {
+
+            //printf("%s\n", completedMessage);
+
+            // Reset the original message buffer
             Message[0] = '\0';
             len = 0;
-            counter = 0;
         }
-
+    }
+        else {
+        // Reset an empty message
+        Message[0] = '\0';
+        len = 0;
+    }
+    counter = 0;
+}
         // Update variables for last button presses if the buttons were pressed or not.
         last_button1_press = button1_press;
         last_button2_press = button2_press;
@@ -89,26 +120,35 @@ void button_task(void *pvParameters) {
     }
 }
 
- //define FreeRTOS task to test USB communication, send a fixed message(SerialTask is running!) to workstation via USB. Verify that if the message is received correctly to the workstation.
-static void serial_task(void *arg){
+// SerialTask receives completed messages from ButtonTask and sends them to the workstation via USB.
+static void serial_task(void *arg) {
     (void)arg;
-    // keep task running forever
-    while(1){
-        //printf("SerialTask is running!\n"); // send message to workstation via USB
-        vTaskDelay(pdMS_TO_TICKS(1000));  // delay for 1 second
+    // Buffer for SerialTask itself to hold received messages from the Queue.
+    char receivedMessage[BUFFER_SIZE];
+
+
+    while (1) {
+        // Wait for a message from the Queue. the message will be stored in buffer receivedMessage. 
+        // SerialTask will wait until a message is available in the Queue by ButtonTask.
+        // The maximum time to wait is portMAX_DELAY, which means it will wait indefinitely.
+        if (xQueueReceive(messageQueue, receivedMessage, portMAX_DELAY) == pdPASS) {
+            // Send the received message from buffer to the workstation via USB
+            printf("%s\n", receivedMessage);
+        }
     }
-}   
+}
+
 
 int main(void) {
-    
+
 // picon i/o alustus
     stdio_init_all();
 //Initialize TKJ HAT SDK
     init_hat_sdk();
-// Alustetaan I2C IMU:n dataa varten
-    init_i2c_default();
 // IMU:n alustus
     init_ICM42670();
+// Alustetaan I2C IMU:n dataa varten
+    init_i2c_default();
 //asetetaan IMU:n näytteenottotaajuudeksi 100Hz ja valitaan mittausalueeksi +-2G, koska meillä kiinnostaa vain missä asennossa pico on.
     ICM42670_startAccel(
         ICM42670_ACCEL_ODR_100HZ,
@@ -117,6 +157,13 @@ int main(void) {
 //Initialize HAT buttons 1 and 2
     init_button1();
     init_button2();
+//Creat the message Queue
+messageQueue = xQueueCreate(MESSAGE_QUEUE_LENGTH, BUFFER_SIZE);
+// Check if the Queue was created successfully
+if (messageQueue == NULL) {
+    printf("Failed to create message queue!\n");
+    return 1; // Exit the program with an error code
+}    
 
 TaskHandle_t hSerialTask;
 
@@ -155,21 +202,14 @@ xTaskCreate(
 
 //käynnistää taskit
 vTaskStartScheduler();
-
+return 0;
 }
 
 
 void read_orientation(void){
-    printf("read_orientation started\n");
     float ax, ay, az;
     float gx, gy, gz;
     float temp;
-
-    ax = 123;
-    ay = 123;
-    az = 123;
-
-printf("before: %f %f %f\n", ax, ay, az);
  //Funktio odottaa parametreikseen muistiosoitteita 
     ICM42670_read_sensor_data(
         &ax, &ay, &az,
@@ -177,8 +217,6 @@ printf("before: %f %f %f\n", ax, ay, az);
         &temp
 //tarvitsemme kuitenkin vain arvoja ax, ay ja az, eli kiihtyvyyttä.
 );
-
-    printf("raw: %f %f %f\n", ax, ay, az);
 // tunnistetaan asento
     if (fabs(az)> 0.95f)
     {orientation = 1; }
@@ -186,11 +224,11 @@ printf("before: %f %f %f\n", ax, ay, az);
     {orientation = 2;}
     else
     {orientation = 3;} // eli asento ei tunnisetettu kummaksikkaan edellä olevista
-    printf("after: %f %f %f\n", ax, ay, az);
-}  
+}   
 
 // Function that stores the symbols in to the global array Message and counts
-// the character length of the message
+// the character length of the message. Avoids buffer overflow by stopping when
+// length equals BUFFER_SIZE - 1. Last position is reserved for \0.
 void symbolhandler(char symbol) {
     if (len < (BUFFER_SIZE - 1)) {
         Message[len] = symbol;

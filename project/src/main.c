@@ -8,7 +8,7 @@
 #include <queue.h> //added for queue functionality
 #include <string.h> 
 
-#define READ_POSE_TASK_STACK_SIZE 32
+#define READ_POSE_TASK_STACK_SIZE 2048
 #define BUTTON_TASK_STACK_SIZE 512
 #define BUFFER_SIZE 256
 #define MESSAGE_QUEUE_LENGTH 3 //Queue for transmitting messages to the serial task, 
@@ -34,7 +34,10 @@ void symbolhandler(char symbol);
 void read_pose_task(void * pvParameters) {
 
     while(1) {
-        
+
+        if (ICM42670_start_with_default_values() != 0){
+            printf("ICM-42670P could not initialize accelerometer or gyroscope\n");
+        }
         read_orientation();
 
         vTaskDelay(pdMS_TO_TICKS(500));
