@@ -191,12 +191,12 @@ xTaskCreate(
 
 // Create SerialTask
 
-    BaseType_t result = xTaskCreate(serial_task,  // (en) Task function
-                "Serial",              // (en) Name of the task 
-                1024,   // (en) Size of the stack for this task (in words). Generally 1024 or 2048
-                NULL,                 // (en) Arguments of the task 
-                2,                    // (en) Priority of this task
-                &hSerialTask);         // (en) A handle to control the execution of this task
+    BaseType_t result = xTaskCreate(serial_task,  // Task function
+                "Serial",              // Name of the task 
+                1024,   // Size of the stack for this task (in words). Generally 1024 or 2048
+                NULL,                 // Arguments of the task 
+                2,                    // Priority of this task
+                &hSerialTask);         // A handle to control the execution of this task
     
     // Check whether task creation succeeded
     if (result != pdPASS) {
