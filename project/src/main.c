@@ -65,8 +65,11 @@ void button_task(void *pvParameters) {
             if (orientation == 1) {
                 symbolhandler('.');
             } 
-            else if (orientation == 2) {
+            if (orientation == 2) {
                 symbolhandler('-');
+            }
+            else if (orientation == 3) {
+                printf("?\n");
             }
         }
 
@@ -79,37 +82,37 @@ void button_task(void *pvParameters) {
         }
 
        // If two spaces have been pressed in a row, send the message to the queue.
-if (counter == 2) {
+        if (counter == 2) {
     // Remove trailing spaces
-    while (len > 0 && Message[len - 1] == ' ') {
-        len--;
-    }
-    Message[len] = '\0';
+            while (len > 0 && Message[len - 1] == ' ') {
+                len--;
+            }
+            Message[len] = '\0';
 
     // Only send a non-empty message
-    if (len > 0) {
-        char completedMessage[BUFFER_SIZE] = {0};
+            if (len > 0) {
+                char completedMessage[BUFFER_SIZE] = {0};
 
         // Copy the completed message
-        memcpy(completedMessage, Message, len + 1);
+                memcpy(completedMessage, Message, len + 1);
 
         // Send the message to the Queue
-        if (xQueueSend(messageQueue,
+                if (xQueueSend(messageQueue,
                        completedMessage,
                        portMAX_DELAY) == pdPASS) {
 
-            printf("Message sent to Queue: %s\n", completedMessage);
+                printf("Message sent to Queue: %s\n", completedMessage);
 
             // Reset the original message buffer
-            Message[0] = '\0';
-            len = 0;
-        }
-    }
-        else {
+                Message[0] = '\0';
+                len = 0;
+                }
+            }
+            else {
         // Reset an empty message
-        Message[0] = '\0';
-        len = 0;
-    }
+                Message[0] = '\0';
+                len = 0;
+        }
     counter = 0;
 }
         // Update variables for last button presses if the buttons were pressed or not.

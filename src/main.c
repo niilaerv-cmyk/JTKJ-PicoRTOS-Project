@@ -68,6 +68,9 @@ void button_task(void *pvParameters) {
             else if (orientation == 2) {
                 symbolhandler('-');
             }
+            else if (orientation == 3) {
+                printf("Unknown orientation\n");
+            }
         }
 
         // If button 2 pressed and it was NOT pressed last loop add a space to the message.
@@ -79,38 +82,38 @@ void button_task(void *pvParameters) {
         }
 
        // If two spaces have been pressed in a row, send the message to the queue.
-if (counter == 2) {
+        if (counter == 2) {
     // Remove trailing spaces
-    while (len > 0 && Message[len - 1] == ' ') {
-        len--;
-    }
-    Message[len] = '\0';
+            while (len > 0 && Message[len - 1] == ' ') {
+                len--;
+            }
+            Message[len] = '\0';
 
     // Only send a non-empty message
-    if (len > 0) {
-        char completedMessage[BUFFER_SIZE] = {0};
+            if (len > 0) {
+                char completedMessage[BUFFER_SIZE] = {0};
 
         // Copy the completed message
-        memcpy(completedMessage, Message, len + 1);
+                memcpy(completedMessage, Message, len + 1);
 
         // Send the message to the Queue
-        if (xQueueSend(messageQueue,
-                       completedMessage,
-                       portMAX_DELAY) == pdPASS) {
+                if (xQueueSend(messageQueue,
+                    completedMessage,
+                    portMAX_DELAY) == pdPASS) {
 
             //printf("%s\n", completedMessage);
 
             // Reset the original message buffer
+                    Message[0] = '\0';
+                    len = 0;
+                }
+            }
+            else {
+        // Reset an empty message
             Message[0] = '\0';
             len = 0;
-        }
-    }
-        else {
-        // Reset an empty message
-        Message[0] = '\0';
-        len = 0;
-    }
-    counter = 0;
+            }
+            counter = 0;
 }
         // Update variables for last button presses if the buttons were pressed or not.
         last_button1_press = button1_press;
